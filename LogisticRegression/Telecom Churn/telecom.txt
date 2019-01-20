@@ -1,0 +1,166 @@
+setwd("C:/Users/Shilpa/Documents/R/usecases")
+
+library(readxl)
+library(caTools)
+library(ROCR)
+
+tele<-read_excel("Telecom Churn data.xlsx" , na=c(""," ")) #we shuldnt use na.strings in case of excel
+
+summary(tele)
+View(tele)
+
+dim(tele)
+
+#remove unique identifiers phone no 
+tele[,c(1,4)]<-NULL
+
+
+View(tele)
+
+#change var's into factor
+tele$`Area Code`=as.factor(tele$`Area Code`)
+
+tele$`Int'l Plan`=as.factor(tele$`Int'l Plan`)
+tele$`VMail Plan`=as.factor(tele$`VMail Plan`)
+tele$`Churn?`=as.factor(tele$`Churn?`)
+
+summary(tele)
+
+boxplot(tele[,-c(2,3,4,19)])
+boxplot(tele$`Account Length`)
+boxplot(tele$`VMail Message`)  #only one outlier so ignore
+boxplot(tele$`Day Mins`) #nature of the var to have outiers
+boxplot(tele$`Day Calls`)
+boxplot(tele$`Day Charge`)
+boxplot(tele$`Eve Mins`)
+boxplot(tele$`Eve Calls`)
+boxplot(tele$`Eve Charge`)
+boxplot(tele$`Night Mins`)
+boxplot(tele$`Night Calls`)
+boxplot(tele$`Night Charge`)
+
+boxplot(tele$`Intl Mins`)
+boxplot(tele$`Intl Calls`)
+boxplot(tele$`Intl Charge`)
+
+boxplot(tele$`CustServ Calls`)
+
+#we you observe your boxplot for all your quan var's you observe large variation in your range
+tele[,c(1,5:18)]=scale(tele[,c(1,5:18)])
+View(tele)
+boxplot(scale(tele[,c(1,5:18)]))
+
+#we have checked the boxplot of account length after performing scaling
+
+table(tele$`Account Length`>3.4) #there is only one outlier of outlier with a lil diff so we can ignore
+
+#we have checked the boxplot of `VMail Message  after performing scaling
+table(tele$`VMail Message`>3) 
+
+table(tele$`Day Mins`>3)
+tele$`Day Mins`=ifelse(tele$`Day Mins`>3,2.8,tele$`Day Mins`)
+
+table(tele$`Day Calls`<= -5)
+tele$`Day Calls`=ifelse(tele$`Day Calls`<= -5,-3.5,tele$`Day Calls`)
+
+table(tele$`Day Charge`>3)
+tele$`Day Charge`=ifelse(tele$`Day Charge`>3,2.89,tele$`Day Charge`)boxplot(scale(tele[,c(1,5:18)]))
+
+
+table(tele$`Eve Mins`<= -3)
+tele$`Eve Mins`=ifelse(tele$`Eve Mins`<=-3,-2.9,tele$`Eve Mins`)
+tele$`Eve Mins`=ifelse(tele$`Eve Mins`>3,2.9,tele$`Eve Mins`)
+
+table(tele$`Eve Calls`<=-3)
+
+tele$`Eve Calls`=ifelse(tele$`Eve Calls`<= -2.9,2.5,tele$`Eve Calls`)
+
+table(tele$`Eve Calls`>3)
+tele$`Eve Calls`=ifelse(tele$`Eve Calls`>3,2.9,tele$`Eve Calls`)
+
+table(tele$`Eve Charge`<= -2.9)
+tele$`Eve Charge`=ifelse(tele$`Eve Charge`<= -2.9,-2.9,tele$`Eve Charge`)
+
+table(tele$`Eve Charge`>2.9)
+tele$`Eve Charge`=ifelse(tele$`Eve Charge`>2.9,2.9,tele$`Eve Charge`)
+
+table(tele$`Night Mins`>2.9)
+tele$`Night Mins`=ifelse(tele$`Night Mins`>2.9,2.9,tele$`Night Mins`)
+tele$`Night Mins`=ifelse(tele$`Night Mins`<= -2.9,-2.9,tele$`Night Mins`)
+
+table(tele$`Night Calls`<=-2.9)
+tele$`Night Calls`=ifelse(tele$`Night Calls`<=-2.9,-2.9,tele$`Night Calls`)
+tele$`Night Calls`=ifelse(tele$`Night Calls`>2.9,2.9,tele$`Night Calls`)
+
+table(tele$`Intl Mins`<=-3)
+tele$`Intl Mins`=ifelse(tele$`Intl Mins`<=-3 , -2.9,tele$`Intl Mins`)
+tele$`Intl Mins`=ifelse(tele$`Intl Mins`>2.9,2.9,tele$`Intl Mins`)
+
+table(tele$`Intl Calls`>2.5)
+tele$`Intl Calls`=ifelse(tele$`Intl Calls`>2.5,2.5,tele$`Intl Calls`)
+
+table(tele$`Intl Charge`<=-3)
+tele$`Intl Charge`=ifelse(tele$`Intl Charge`<=-3,-3,tele$`Intl Charge`)
+tele$`Intl Charge`=ifelse(tele$`Intl Charge`>2.9,2.9,tele$`Intl Charge`)
+
+table(tele$`CustServ Calls` >2)
+tele$`CustServ Calls`=ifelse(tele$`CustServ Calls`>2 , 1.5,tele$`CustServ Calls`)
+boxplot(tele$`CustServ Calls`)
+boxplot(scale(tele[,c(1,5:18)]))
+
+
+
+#set.seed(1234) use this function before random sampling and u r random data will be stored here,and every time you call it,the same dataset will be executed 
+split=sample.split(tele$`Churn?`,0.7)
+train=subset(tele,split==TRUE)
+train
+test=subset(tele,split==FALSE) 
+test
+ dim(train)
+ dim(test)
+
+ attach(train)
+ model1<-glm(`Churn?`~. , family = binomial(link="logit"),train)
+summary(model1)  #AIC: 1536.5
+
+
+#including only significant var's
+model2<-glm(`Churn?`~`Int'l Plan`+`VMail Plan`+`VMail Message`+`Intl Calls`+`CustServ Calls`, family=binomial(link="logit"),train)
+summary(model2) #AIC: 1687
+
+
+#here we remove night calls as it is sig
+model3<-glm(`Churn?`~`Int'l Plan`+`VMail Plan`+`Intl Calls`+`CustServ Calls`, family=binomial(link="logit"),train)
+summary(model3)  #AIC: 1664.7
+
+
+
+#validation
+pred=predict(model3,test,type='response')
+
+
+pred=ifelse(pred>0.5,1,0)
+class(pred) #numeric
+
+
+cm=table(pred,test$`Churn?`)
+cm
+precision=cm[2,2]/(cm[2,2]+cm[2,1])
+precision  #58.06
+
+
+
+
+#ROC CURVE
+#for u to plot ROC u r Pred and test$churn should be in same class it cant be facor r character it should be in NUMERIC
+
+test$`Churn?`=ifelse(test$`Churn?`=='True.',1,0) #coverted to numeric
+
+test$`Churn?` 
+
+p=prediction(pred,test$`Churn?`)
+roc=performance(p,measure = 'tpr',x.measure = 'fpr')
+plot(roc)  
+
+auc=performance(p,'auc')
+auc@y.values
