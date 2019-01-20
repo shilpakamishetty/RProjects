@@ -1,3 +1,6 @@
+
+#Built an automation model for the loan approval
+
 library(Amelia)
 
 library(ROCR)
